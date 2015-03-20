@@ -3,9 +3,8 @@ require 'rake'
 desc "Setup local development environment"
 task :install do
   # update_homebrew
-  # install_nginx
-  update_nginx_config
-  success_msg("installed")
+  configure_nginx
+  install_dnsmasq
 end
 
 def update_homebrew
@@ -13,43 +12,46 @@ def update_homebrew
   puts "======================================================"
   puts "Updating Homebrew."
   puts "======================================================"
-  run %{ brew update }
+  `brew update`
   puts
   puts
 end
 
 private
-def run(cmd)
-  puts "[Running] #{cmd}"
-  `#{cmd}`
+def shout(message)
+  puts "======================================================"
+  puts "\e[32m #{message}\e[0m"
+  puts "======================================================"
 end
 
-def install_nginx
-  puts "Installing nginx"
-  puts
-  run %{ brew install nginx }
+def configure_nginx
+  if(system('brew install nginx'))
+    update_nginx_config
+  else
+    shout("Error installing nginx.")
+    Process.exit(0)
+  end
 end
 
 def update_nginx_config
-  puts
-  puts "======================================================"
-  puts "replacing stock nginx config with our own"
-  puts "======================================================"
-  puts
-  puts "Enter the location for your project root: "
-  project_root = STDIN.gets.chomp
-  puts project_root
-  run %{ curl -fsSL -o /usr/local/etc/nginx/nginx.conf https://raw.githubusercontent.com/ernie/the_setup/master/01_nginx/nginx.conf }
-  run %{ ruby -pi.bak -e "gsub(/<MY_PROJECT_ROOT>/, '#{project_root}')" /usr/local/etc/nginx/nginx.conf }
-  run %{ curl -fsSL -o /usr/local/etc/nginx/proxy_ports.conf https://raw.githubusercontent.com/ernie/the_setup/master/01_nginx/proxy_ports.conf }
+  shout("Replacing stock nginx config with our own")
+
+  `curl -fsSL -o /usr/local/etc/nginx/nginx.conf https://raw.githubusercontent.com/ernie/the_setup/master/01_nginx/nginx.conf`
+
+  `ruby -pi.bak -e "gsub(/<MY_PROJECT_ROOT>/, '$HOME/Projects')" /usr/local/etc/nginx/nginx.conf`
+
+  `curl -fsSL -o /usr/local/etc/nginx/proxy_ports.conf https://raw.githubusercontent.com/ernie/the_setup/master/01_nginx/proxy_ports.conf`
 end
 
-def success_msg(action)
-  puts
-  puts
-  puts
-  puts "Development Environment has now been setup"
-  puts
-  puts
-  puts
+def install_dnsmasq
+  if(system('brew install --quiet dnsmasq'))
+    update_dnsmasq_config
+  else
+    shout("Error installing dnsmasq.")
+    Process.exit(0)
+  end
+end
+
+def update_dnsmasq_config
+  shout("Will do it later")
 end
