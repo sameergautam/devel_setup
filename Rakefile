@@ -2,7 +2,25 @@ require 'rake'
 
 desc "Setup local development environment"
 task :install do
+  update_homebrew
+  install_nginx
   success_msg("installed")
+end
+
+def update_homebrew
+  puts
+  puts "======================================================"
+  puts "Updating Homebrew."
+  puts "======================================================"
+  run %{brew update}
+  puts
+  puts
+end
+
+def install_nginx
+  puts "Installing nginx"
+  puts
+  run %{brew install nginx}
 end
 
 def success_msg(action)
