@@ -5,6 +5,7 @@ task :install do
   can_i_run_sudo = `sudo uptime 2>&1|grep "load"|wc -l`
   if(can_i_run_sudo.to_i > 0)
     # update_homebrew
+    grab_config_files
     configure_nginx
     configure_dnsmasq
     configure_pfctl
@@ -30,6 +31,28 @@ def update_homebrew
   end
 end
 
+def grab_config_files
+  `mkdir -p /tmp/config`
+
+  `curl -fsSL -o /tmp/nginx.conf https://raw.githubusercontent.com/ernie/the_setup/master/01_nginx/nginx.conf`
+
+  `curl -fsSL -o /tmp/proxy_ports.conf https://raw.githubusercontent.com/ernie/the_setup/master/01_nginx/proxy_ports.conf`
+
+  `curl -fsSL -o /tmp/dnsmasq.conf https://raw.githubusercontent.com/ernie/the_setup/master/02_dnsmasq/dnsmasq.conf`
+
+  `sudo curl -fsSL -o /tmp/pf.conf \
+  https://raw.githubusercontent.com/ernie/the_setup/master/03_pfctl/pf.conf`
+
+  `sudo curl -fsSL -o /tmp/devel.local \
+  https://raw.githubusercontent.com/ernie/the_setup/master/03_pfctl/pf.anchors/devel.local`
+
+  `sudo curl -fsSL -o /tmp/devel.local.forwarding \
+  https://raw.githubusercontent.com/ernie/the_setup/master/03_pfctl/pf.anchors/devel.local.forwarding`
+
+  `sudo curl -fsSL -o /tmp/devel.local.pfctl.plist \
+  https://raw.githubusercontent.com/ernie/the_setup/master/03_pfctl/devel.local.pfctl.plist`
+end
+
 def configure_nginx
   if(system('brew install nginx'))
     update_nginx_config
@@ -42,11 +65,9 @@ end
 def update_nginx_config
   shout("Updating nginx config.")
 
-  `curl -fsSL -o /usr/local/etc/nginx/nginx.conf https://raw.githubusercontent.com/ernie/the_setup/master/01_nginx/nginx.conf`
+  `sed  "s;<MY_PROJECT_ROOT>;$HOME/Projects;g" /tmp/nginx.conf > /usr/local/etc/nginx/nginx.conf`
 
-  `ruby -pi.bak -e "gsub(/<MY_PROJECT_ROOT>/, '$HOME/Projects')" /usr/local/etc/nginx/nginx.conf`
-
-  `curl -fsSL -o /usr/local/etc/nginx/proxy_ports.conf https://raw.githubusercontent.com/ernie/the_setup/master/01_nginx/proxy_ports.conf`
+  `cp /tmp/proxy_ports.conf /usr/local/etc/nginx/proxy_ports.conf`
 
   system('sudo mkdir /etc/resolver')
 
@@ -65,7 +86,7 @@ end
 def update_dnsmasq_config
   shout("Updating dnsmasq config.")
 
-  `curl -fsSL -o /usr/local/etc/dnsmasq.conf https://raw.githubusercontent.com/ernie/the_setup/master/02_dnsmasq/dnsmasq.conf`
+  `cp /tmp/dnsmasq.conf /usr/local/etc/dnsmasq.conf`
 
   `sudo cp -fv /usr/local/opt/dnsmasq/*.plist /Library/LaunchDaemons`
 
@@ -76,17 +97,13 @@ end
 def configure_pfctl
   shout("Updating pfctl")
 
-  `sudo curl -fsSL -o /etc/pf.conf \
-  https://raw.githubusercontent.com/ernie/the_setup/master/03_pfctl/pf.conf`
+  `sudo cp /tmp/pf.conf /etc/pf.conf`
 
-  `sudo curl -fsSL -o /etc/pf.anchors/devel.local \
-  https://raw.githubusercontent.com/ernie/the_setup/master/03_pfctl/pf.anchors/devel.local`
+  `sudo cp /tmp/devel.local /etc/pf.anchors/devel.local`
 
-  `sudo curl -fsSL -o /etc/pf.anchors/devel.local \
-  https://raw.githubusercontent.com/ernie/the_setup/master/03_pfctl/pf.anchors/devel.local.forwarding`
+  `sudo cp /tmp/devel.local.forwarding /etc/pf.anchors/devel.local.forwarding`
 
-  `sudo curl -fsSL -o /Library/LaunchDaemons/devel.local.pfctl.plist \
-  https://raw.githubusercontent.com/ernie/the_setup/master/03_pfctl/devel.local.pfctl.plist`
+  `sudo cp /tmp/devel.local.pfctl.plist /Library/LaunchDaemons/devel.local.pfctl.plist`
 
   `sudo chown root:wheel /Library/LaunchDaemons/devel.local.pfctl.plist`
 
